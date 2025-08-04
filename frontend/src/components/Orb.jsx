@@ -5,7 +5,7 @@ import "../styles/Orb.css";
 
 export default function Orb({
   hue = 0,
-  hoverIntensity = 10.0,
+  hoverIntensity = 9.2,
   rotateOnHover = true,
   forceHoverState = false,
 }) {
@@ -223,11 +223,11 @@ export default function Orb({
     const rotationSpeed = 0.3;
 
     const handleMouseMove = (e) => {
-      const rect = container.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const width = rect.width;
-      const height = rect.height;
+      // Use viewport coordinates instead of container coordinates
+      const x = e.clientX;
+      const y = e.clientY;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
       const size = Math.min(width, height);
       const centerX = width / 2;
       const centerY = height / 2;
@@ -245,8 +245,8 @@ export default function Orb({
       targetHover = 0;
     };
 
-    container.addEventListener("mousemove", handleMouseMove);
-    container.addEventListener("mouseleave", handleMouseLeave);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseleave", handleMouseLeave);
 
     let rafId;
     const update = (t) => {
@@ -272,8 +272,8 @@ export default function Orb({
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
-      container.removeEventListener("mousemove", handleMouseMove);
-      container.removeEventListener("mouseleave", handleMouseLeave);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseleave", handleMouseLeave);
       container.removeChild(gl.canvas);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
