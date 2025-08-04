@@ -1,27 +1,101 @@
-# backend/model/inference.py
 import torch
 import numpy as np
+import torch.nn as nn
+from backend.utils.preprocess import preprocess_audio
+from backend.utils.loader import load_model
 
-from utils.loader import load_model
-from utils.preprocess import preprocess_file
-
-
+# -------------------------
+# Main prediction function
+# -------------------------
 def predict_deepfake(file_path: str, model_type: str) -> dict:
-    model, input_type = load_model(model_type)
-    model.eval()
+    try:
+        # Load model and input type
+        model, input_type = load_model(model_type)
+        model.eval()
 
-    # Preprocess input
-    x = preprocess_file(file_path, input_type)
-    x = torch.from_numpy(x).unsqueeze(0)  # Add batch dim
+        # Preprocess the input
+        x = preprocess_audio(file_path, input_type)
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x)
+        if x.ndim == 1:
+            x = x.unsqueeze(0)  # (1, features)
+        elif x.ndim == 2 and x.shape[0] != 1:
+            x = x.unsqueeze(0)  # add batch dim if needed
 
-    with torch.no_grad():
-        logits = model(x)
-        probs = torch.nn.functional.softmax(logits, dim=1).squeeze().cpu().numpy()
+        with torch.no_grad():
+            output = model(x)
 
-    prediction = "REAL" if np.argmax(probs) == 0 else "FAKE"
-    confidence = float(np.max(probs))
+            if model_type == "wav2vec":
+                # Binary classifier with sigmoid output
+                prob_fake = output.item()
+                prediction = "FAKE" if prob_fake > 0.5 else "REAL"
+                confidence = prob_fake if prediction == "FAKE" else 1 - prob_fake
+            else:
+                # Multi-class classifier with softmax
+                probs = torch.nn.functional.softmax(output, dim=1).squeeze().cpu().numpy()
+                predicted_class = np.argmax(probs)
+                prediction = "REAL" if predicted_class == 0 else "FAKE"
+                confidence = float(probs[predicted_class])
 
-    return {
-        "prediction": prediction,
-        "confidence": round(confidence, 4)
-    }
+        return {
+            "prediction": prediction,
+            "confidence": round(confidence, 4)
+        }
+
+    except Exception as e:
+        return {"error": f"Failed to load model: {str(e)}"}
+
+# -------------------------
+# Model Definitions
+# -------------------------
+class CNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, 2)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+class CRNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, 2)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+class Wav2VecClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(768, 256),
+            nn.ReLU(),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+# -------------------------
+# Model path mapping
+# -------------------------
+MODEL_PATHS = {
+    "cnn": "model/cnn_full.pt",
+    "crnn": "model/crnn_full.pt",
+    "wav2vec": "model/wav2vec_mlp.pt"
+}

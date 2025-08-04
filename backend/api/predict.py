@@ -1,35 +1,25 @@
-# backend/api/predict.py
+import os
+from uuid import uuid4
 from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import JSONResponse
-import os
-import uuid
-import shutil
 
-from core.config import settings
-from model.inference import predict_deepfake
+from backend.model.inference import predict_deepfake
 
 router = APIRouter()
 
-UPLOAD_DIR = "temp"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 @router.post("/predict")
-async def predict(
-    file: UploadFile = File(...),
-    model: str = Form(...)
-):
-    # Save temp file
-    ext = os.path.splitext(file.filename)[1]
-    uid = str(uuid.uuid4())
-    file_path = os.path.join(UPLOAD_DIR, f"{uid}{ext}")
+async def predict(file: UploadFile = File(...), model_type: str = Form(...)):
+    try:
+        contents = await file.read()
+        os.makedirs("uploads", exist_ok=True)  # ✅ Ensure 'uploads/' exists
+        file_id = uuid4().hex
+        save_path = f"uploads/{file_id}_{file.filename}"
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with open(save_path, "wb") as f:
+            f.write(contents)
 
-    # Run prediction
-    result = predict_deepfake(file_path, model_type=model)
+        result = predict_deepfake(save_path, model_type)
+        return result
 
-    # Cleanup temp file
-    os.remove(file_path)
-
-    return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
