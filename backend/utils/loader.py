@@ -1,6 +1,7 @@
 # backend/utils/loader.py
 import torch
-from backend.model.architecture import CNN, CRNN, Wav2VecClassifier, MODEL_PATHS
+from backend.model.architecture import CNN, CRNN, Wav2VecClassifier, MODEL_PATHS, Wav2VecLSTMClassifier
+
 
 def load_model(model_type: str):
     if model_type == "cnn":
@@ -12,6 +13,9 @@ def load_model(model_type: str):
     elif model_type == "wav2vec":
         model = Wav2VecClassifier()
         input_type = "raw"
+    elif model_type == "lstm":
+         model = Wav2VecLSTMClassifier()
+         input_type = "raw"
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 

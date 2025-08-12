@@ -1,5 +1,7 @@
 # backend/model/architecture.py
+import torch
 import torch.nn as nn
+
 
 class CNN(nn.Module):
     def __init__(self):
@@ -45,10 +47,31 @@ class Wav2VecClassifier(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+    
+    
+class Wav2VecLSTMClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.lstm = nn.LSTM(768, 128, num_layers=2, batch_first=True, bidirectional=True)
+        self.classifier = nn.Sequential(
+            nn.Linear(128 * 2, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)  # no Sigmoid here
+        )
+
+    def forward(self, x):
+        lengths = torch.tensor([x.shape[0]])
+        x = x.unsqueeze(0)  # add batch
+        packed = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+        _, (hn, _) = self.lstm(packed)
+        final = torch.cat((hn[-2], hn[-1]), dim=1)
+        return self.classifier(final).squeeze()
+
 
 
 MODEL_PATHS = {
     "cnn": "backend/model/cnn_full.pt",
     "crnn": "backend/model/crnn_full.pt",
+    "lstm": "backend/model/wav2vec_lstm_balanced.pt",
     "wav2vec": "backend/model/wav2vec_mlp.pt"
 }

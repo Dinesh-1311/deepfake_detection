@@ -26,10 +26,18 @@ def predict_deepfake(file_path: str, model_type: str) -> dict:
             output = model(x)
 
             if model_type == "wav2vec":
-                # Binary classifier with sigmoid output
-                prob_fake = output.item()
-                prediction = "FAKE" if prob_fake > 0.5 else "REAL"
-                confidence = prob_fake if prediction == "FAKE" else 1 - prob_fake
+                # Binary classifier already includes sigmoid in final layer
+                prob = output.item()
+                prediction = "REAL" if prob >= 0.5 else "FAKE"
+                confidence = prob if prediction == "REAL" else 1 - prob
+
+            elif model_type == "lstm":
+                # Binary classifier: output is raw logit, apply sigmoid here
+                prob = torch.sigmoid(output).item()
+                prediction = "REAL" if prob > 0.5 else "FAKE"
+                confidence = prob if prediction == "REAL" else 1 - prob
+
+
             else:
                 # Multi-class classifier with softmax
                 probs = torch.nn.functional.softmax(output, dim=1).squeeze().cpu().numpy()
@@ -39,7 +47,7 @@ def predict_deepfake(file_path: str, model_type: str) -> dict:
 
         return {
             "prediction": prediction,
-            "confidence": round(confidence, 4)
+            "confidence": f"{round(confidence * 100, 2)}%"
         }
 
     except Exception as e:
@@ -97,5 +105,6 @@ class Wav2VecClassifier(nn.Module):
 MODEL_PATHS = {
     "cnn": "model/cnn_full.pt",
     "crnn": "model/crnn_full.pt",
-    "wav2vec": "model/wav2vec_mlp.pt"
+    "wav2vec": "model/wav2vec_mlp.pt",
+    "lstm": "model/wav2vec_lstm_balanced.pt"
 }

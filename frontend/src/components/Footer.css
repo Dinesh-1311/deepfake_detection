@@ -1,0 +1,76 @@
+/* src/components/Footer.css */
+
+.footer {
+  position: relative;
+  z-index: 10; /* Higher than Orb or Threads */
+  background-color: white; /* Dark blue or black */
+  color: black;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.footer-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.footer-left {
+  flex: 1 1 300px;
+  margin-bottom: 1rem;
+}
+
+.footer-company {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #00bfff;
+}
+
+.footer-tagline {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+.footer-contact {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.footer-right {
+  flex: 1 1 200px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.footer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-nav a {
+  color: #00bfff;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: color 0.3s ease;
+}
+
+.footer-nav a:hover {
+  color: #ffffff;
+}
+
+@media screen and (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer-right {
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+}

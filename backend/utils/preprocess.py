@@ -54,6 +54,19 @@ def extract_wav2vec_features(file_path):
         _model.eval()
 
     waveform, _ = load_audio(file_path)
+
+    # ✅ Apply VAD to remove silence/background
+    try:
+        from torchaudio.functional import vad
+        waveform = waveform * (32768.0 / waveform.abs().max())  # Normalize for VAD
+        vad_waveform = vad(waveform, sample_rate=SAMPLE_RATE)
+        if vad_waveform.numel() > 0:
+            waveform = vad_waveform
+        else:
+            print("⚠️ VAD removed all audio — using original waveform.")
+    except Exception as e:
+        print(f"⚠️ VAD failed: {e} — using original waveform.")
+
     input_values = _processor(
         waveform.squeeze().numpy(),
         return_tensors="pt",
@@ -65,6 +78,7 @@ def extract_wav2vec_features(file_path):
         pooled = hidden_states.mean(dim=1)  # (1, 768)
 
     return pooled.squeeze(0)  # shape: (768,)
+
 
 def preprocess_audio(file_path: str, input_type: str) -> torch.Tensor:
     """
