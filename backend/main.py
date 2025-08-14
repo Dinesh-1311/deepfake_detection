@@ -1,66 +1,63 @@
-# main.py
+# backend/main.py
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import uvicorn
-import os
-import shutil
+from starlette.concurrency import run_in_threadpool
 from pathlib import Path
+import shutil
+import uvicorn
+from uuid import uuid4
+from backend.api.predict import router as predict_router
 
-# ---- try to use your local modules (no 'backend.' prefix) ----
-try:
-    from inference import predict_deepfake  # your function (adjust if name differs)
-except Exception:
-    # fallback stub so the API still runs if your model code isn't ready
-    def predict_deepfake(file_path: str, model_type: str) -> dict:
-        # TODO: wire to your real preprocess/loader/model once ready
-        return {"model": model_type, "score": 0.12, "label": "real", "extra": "stubbed result"}
 
-app = FastAPI(title="Deepfake API", version="1.0")
+app = FastAPI(title="Deepfake API (testing)", version="1.0")
 
-# CORS so Vite (http://localhost:5173 by default) can call the API
+# CORS for quick testing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],     # tighten to your frontend origin(s) in prod
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+app.include_router(predict_router, prefix="/api") 
 
 @app.get("/health")
 def health():
     return {"ok": True}
 
+UPLOAD_DIR = (Path(__file__).resolve().parent / "uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 @app.post("/predict")
 async def predict_endpoint(
     file: UploadFile = File(...),
-    model_type: str = Form(default="wave2vec")  # or whatever you support
+    arch: str = Form(default="wav2vec"),   # default so you don't need to send model_type
 ):
-    # save to disk (some models need file path)
+    # ✅ lazy import so startup stays instant
+    from backend.model.inference import predict_deepfake
+
+    # save upload
+    suffix = Path(file.filename).suffix or ".wav"
+    tmp_path = UPLOAD_DIR / f"{uuid4().hex}{suffix}"
     try:
-        suffix = Path(file.filename).suffix or ""
-        temp_path = UPLOAD_DIR / f"input{suffix}"
-        with temp_path.open("wb") as f:
+        with tmp_path.open("wb") as f:
             shutil.copyfileobj(file.file, f)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to save upload: {e}")
 
-    # run inference
+    # run heavy compute off the event-loop
     try:
-        result = predict_deepfake(str(temp_path), model_type)
+        result = await run_in_threadpool(predict_deepfake, str(tmp_path), arch)
+        return JSONResponse(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {e}")
-
-    # optionally clean up temp file
-    try:
-        temp_path.unlink(missing_ok=True)
-    except:
-        pass
-
-    return JSONResponse(result)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except:
+            pass
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

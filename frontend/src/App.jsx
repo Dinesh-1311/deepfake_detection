@@ -88,7 +88,7 @@ function App() {
       form.append('model_type', 'wav2vec'); // default model
 
       // POST to FastAPI: /api/predict
-      const { data } = await axios.post(`${API_BASE}/predict`, form, {
+      const { data } = await axios.post(`${API_BASE}/api/predict`, form, {
         onUploadProgress: (e) => {
              if (!e.total) return;              // sometimes total is undefined
              const pct = Math.round((e.loaded * 100) / e.total);

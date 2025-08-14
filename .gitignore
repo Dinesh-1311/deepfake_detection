@@ -1,2 +1,37 @@
 venv/
 backend/venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node modules
+node_modules/
+
+# Audio uploads (local test files)
+backend/uploads/
+
+# Environment files
+.env
+.env.*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build artifacts
+dist/
+build/
+
+# IDE/Editor settings
+.vscode/
+.idea/
+
+# Python virtual environment folders
+venv/
+.env/
