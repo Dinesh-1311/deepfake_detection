@@ -1,0 +1,16 @@
+/* Orb.css */
+.orb-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    overflow: hidden; /* Prevent scrollbars */
+}
+
+/* .orb-container canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: block;
+} */
